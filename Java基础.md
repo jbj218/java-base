@@ -146,3 +146,107 @@ static int count;   // 所有实例共享这一份 count
 
 > **静态内部类的 `static` 不是"只有一份实例"，而是"不持有外部类引用、可独立创建"。** 所以你当然能 `new` 多个静态内部类对象，和 `static` 完全不冲突。冲突感来自把"修饰字段的 static（共享一份）"和"修饰类的 static（不依附外部实例）"混为一谈了。
 
+## 集合
+
+Java 集合框架主要分为两大接口体系：**Collection** 和 **Map**。
+
+### 一、整体结构图
+
+text
+
+```
+Iterable
+└── Collection
+    ├── List（有序、可重复）
+    │   ├── ArrayList
+    │   ├── LinkedList
+    │   └── Vector
+    │       └── Stack
+    ├── Set（无序、不可重复）
+    │   ├── HashSet
+    │   │   └── LinkedHashSet
+    │   ├── TreeSet
+    │   └── (EnumSet)
+    └── Queue（队列）
+        ├── PriorityQueue
+        ├── Deque
+        │   ├── ArrayDeque
+        │   └── LinkedList
+        └── BlockingQueue（并发包）
+
+Map（键值对）
+├── HashMap
+│   └── LinkedHashMap
+├── TreeMap
+├── Hashtable
+│   └── Properties
+└── ConcurrentHashMap（并发包）
+```
+
+
+
+### 二、Collection 体系
+
+#### 1. List（有序、可重复、有索引）
+
+| 实现类         | 底层结构    | 特点                                    | 适用场景                |
+| :------------- | :---------- | :-------------------------------------- | :---------------------- |
+| **ArrayList**  | 动态数组    | 查询快 O(1)，增删慢 O(n)，非线程安全    | 查询多、增删少          |
+| **LinkedList** | 双向链表    | 增删快 O(1)，查询慢 O(n)，可作队列/栈   | 频繁增删                |
+| **Vector**     | 动态数组    | 线程安全（方法加 synchronized），性能低 | 已过时，不推荐          |
+| **Stack**      | 继承 Vector | 后进先出（LIFO）                        | 已过时，推荐 ArrayDeque |
+
+#### 2. Set（无序、不可重复）
+
+| 实现类            | 底层结构          | 特点                                    |
+| :---------------- | :---------------- | :-------------------------------------- |
+| **HashSet**       | HashMap           | 无序，查询快，依赖 hashCode/equals      |
+| **LinkedHashSet** | LinkedHashMap     | 保持插入顺序                            |
+| **TreeSet**       | TreeMap（红黑树） | 有序（自然排序或 Comparator），O(log n) |
+| **EnumSet**       | 位向量            | 专用于枚举，性能极高                    |
+
+#### 3. Queue / Deque（队列）
+
+| 实现类            | 底层结构 | 特点                                                    |
+| :---------------- | :------- | :------------------------------------------------------ |
+| **PriorityQueue** | 二叉堆   | 按优先级出队（非 FIFO）                                 |
+| **ArrayDeque**    | 循环数组 | 高效双端队列，可作栈/队列，性能优于 Stack 和 LinkedList |
+| **LinkedList**    | 双向链表 | 也实现了 Deque 接口                                     |
+
+### 三、Map 体系（键值对）
+
+| 实现类                | 底层结构         | 有序性        | 线程安全       | 特点                   |
+| :-------------------- | :--------------- | :------------ | :------------- | :--------------------- |
+| **HashMap**           | 数组+链表+红黑树 | 无序          | 否             | 最常用，允许 null 键值 |
+| **LinkedHashMap**     | HashMap+双向链表 | 插入/访问顺序 | 否             | 可做 LRU 缓存          |
+| **TreeMap**           | 红黑树           | 键有序        | 否             | 支持排序，O(log n)     |
+| **Hashtable**         | 数组+链表        | 无序          | 是（全表锁）   | 已过时，不允许 null    |
+| **Properties**        | 继承 Hashtable   | 无序          | 是             | 配置文件专用           |
+| **ConcurrentHashMap** | 数组+链表+红黑树 | 无序          | 是（分段/CAS） | 高并发首选             |
+
+### 四、并发集合（java.util.concurrent）
+
+| 类别         | 实现类                                                       |
+| :----------- | :----------------------------------------------------------- |
+| 并发 Map     | **ConcurrentHashMap**、ConcurrentSkipListMap                 |
+| 并发 List    | **CopyOnWriteArrayList**                                     |
+| 并发 Set     | **CopyOnWriteArraySet**、ConcurrentSkipListSet               |
+| 阻塞队列     | ArrayBlockingQueue、LinkedBlockingQueue、PriorityBlockingQueue、SynchronousQueue、DelayQueue |
+| 双端阻塞队列 | LinkedBlockingDeque                                          |
+
+### 五、选型建议速查
+
+- **需要索引、查询多** → `ArrayList`
+- **频繁头尾增删、作栈/队列** → `ArrayDeque` / `LinkedList`
+- **去重** → `HashSet`；**去重且保序** → `LinkedHashSet`；**去重且排序** → `TreeSet`
+- **键值存储** → `HashMap`；**保序** → `LinkedHashMap`；**排序** → `TreeMap`
+- **多线程环境** → `ConcurrentHashMap`、`CopyOnWriteArrayList`、阻塞队列
+- **优先级处理** → `PriorityQueue`
+
+### 六、核心对比要点
+
+1. **ArrayList vs LinkedList**：数组 vs 链表，随机访问 vs 频繁增删。
+2. **HashMap vs TreeMap vs LinkedHashMap**：哈希无序 vs 红黑树有序 vs 链表保插入序。
+3. **HashSet vs TreeSet**：哈希 O(1) 无序 vs 红黑树 O(log n) 有序。
+4. **HashMap vs Hashtable vs ConcurrentHashMap**：非线程安全 vs 全表锁 vs CAS+分段锁。
+5. **ArrayDeque vs Stack**：推荐用 ArrayDeque 实现栈（性能更好、无同步开销）。
