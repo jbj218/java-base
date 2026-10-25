@@ -250,3 +250,114 @@ Map（键值对）
 3. **HashSet vs TreeSet**：哈希 O(1) 无序 vs 红黑树 O(log n) 有序。
 4. **HashMap vs Hashtable vs ConcurrentHashMap**：非线程安全 vs 全表锁 vs CAS+分段锁。
 5. **ArrayDeque vs Stack**：推荐用 ArrayDeque 实现栈（性能更好、无同步开销）。
+
+## Duration
+
+`Duration` 是 **Java 8** 引入的一个时间类，位于 `java.time` 包下。它的核心作用是：**表示一段精确的时间间隔（比如几秒、几分钟、几小时）**。
+
+它和 `LocalDateTime`（表示某个具体时刻，比如“2026年10月25日 12:00”）是互补的：一个表示“时间点”，一个表示“时间段”。
+
+------
+
+### 一、基本用法
+
+java
+
+```
+// 1. 表示 5 分钟
+Duration duration = Duration.ofMinutes(5);
+
+// 2. 表示 2 小时 30 分钟
+Duration duration2 = Duration.ofHours(2).plusMinutes(30);
+
+// 3. 获取具体的秒数
+long seconds = duration.getSeconds(); // 输出 300
+
+// 4. 转换为毫秒（常用于设置超时时间）
+long millis = duration.toMillis(); // 输出 300000
+```
+
+
+
+------
+
+### 二、最常见的使用场景
+
+#### 1. 设置 Redis 缓存过期时间
+
+这是你在写代码时最常遇到的地方。Spring Data Redis 的 API 要求传入一个 `Duration`：
+
+java
+
+```
+// 设置 key 在 10 分钟后过期
+redisTemplate.opsForValue().set(key, value, Duration.ofMinutes(10));
+
+// 或者设置 1 天过期
+redisTemplate.expire(key, Duration.ofDays(1));
+```
+
+
+
+#### 2. 计算两个时间点之间的间隔
+
+java
+
+```
+LocalDateTime start = LocalDateTime.now();
+// ... 执行一些耗时操作 ...
+LocalDateTime end = LocalDateTime.now();
+
+// 计算中间相隔了多少时间
+Duration timeElapsed = Duration.between(start, end);
+System.out.println("耗时：" + timeElapsed.toMillis() + " 毫秒");
+```
+
+
+
+#### 3. 配合 `Thread.sleep()` 或超时控制
+
+java
+
+```
+// 让线程休眠 2 秒钟（Java 19+ 支持直接传 Duration）
+// Thread.sleep(Duration.ofSeconds(2)); 
+
+// 在 Java 8 中，通常这样转：
+Thread.sleep(Duration.ofSeconds(2).toMillis());
+```
+
+
+
+------
+
+### 三、常用方法速查
+
+| 方法                     | 作用                                 |
+| :----------------------- | :----------------------------------- |
+| `Duration.ofSeconds(30)` | 创建 30 秒的间隔                     |
+| `Duration.ofMinutes(10)` | 创建 10 分钟的间隔                   |
+| `Duration.ofHours(2)`    | 创建 2 小时的间隔                    |
+| `Duration.ofDays(1)`     | 创建 1 天的间隔                      |
+| `duration.toMillis()`    | 转成毫秒数（long）                   |
+| `duration.toSeconds()`   | 转成秒数（long）                     |
+| `duration.getSeconds()`  | 获取内部的秒数部分                   |
+| `duration.isNegative()`  | 判断是否为负数（比如两个时间算反了） |
+
+------
+
+### 💡 为什么不用 `int` 或 `long` 直接表示时间？
+
+在旧的代码里，你可能会看到：
+
+java
+
+```
+redisTemplate.expire(key, 10, TimeUnit.MINUTES);
+```
+
+
+
+这种写法需要额外传一个 `TimeUnit` 枚举。而 `Duration` 把**数值**和**单位**打包在了一起（`Duration.ofMinutes(10)`），语义更清晰，不容易传错参数（比如把毫秒当成了秒传进去）。
+
+**一句话总结：`Duration` 就是 Java 8 里专门用来表示“一段时间”的类，在 Redis 过期时间、耗时计算、超时设置等场景中，比传统的 `long + TimeUnit` 更优雅、更安全。**
